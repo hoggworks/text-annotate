@@ -1,0 +1,197 @@
+<html>
+<head>
+  <title>Text Annotate</title>
+  <style>
+    .selections__item {
+      width: 100%;
+      width: calc(100% - 2px);
+      height: 2px;
+      float: left;
+      margin-top:1px;
+      border: 1px solid transparent;
+    }
+
+    .selections {
+      float: left;
+      margin: 0;
+      position: inherit;
+      top: 0;
+      left: 0;
+      width: 100%;
+    }
+
+    .text-character {
+      display: inline-block;
+      vertical-align:text-top;
+      position: relative;
+    }
+
+    .text-character__letter {
+      float: left;
+    }
+  </style>
+  <script type="text/javascript">
+    colours = ["#cccccc", "#cecece", "#f3ff91", "#ff3661", "#a0b4ff"];
+    selections = {};
+    next_selection = 0;
+    text_character_id = 0;
+
+    function getRandomColour() {
+      var id = Math.floor(Math.random()*colours.length);
+      return colours[id];
+    }
+
+    function getSelectionText() {
+      var text = "";
+      if (window.getSelection) {
+        text = window.getSelection().toString();
+      } else if (document.selection && document.selection.type != "Control") {
+        text = document.selection.createRange().text;
+      }
+      return text;
+    }
+
+    function isTextSelected(input){
+      var element = document.getElementById(input);
+      var startPos = $(input).selectionStart;
+
+      console.log("document selection", startPos, input, element);
+
+    if (startPos !== undefined) {
+      return true;
+    } else {
+      return false;
+    }
+
+    /* if(doc && doc.createRange().text.length != 0){
+      return true;
+     }else if (!doc && input.value.substring(startPos,endPos).length != 0){
+      return true;
+     }
+     return false;*/
+    }
+
+    function truncate(str) {
+      var exp = str.split("");
+      var ret = '';
+      for (var i = 0; i<exp.length; i++) {
+        if (!/[^a-zA-Z0-9]/.test(exp[i])) {
+          ret += exp[i];
+        }
+      }
+
+      return ret;
+    }
+
+    function redrawText() {
+      exploded_text = init_text.split("");
+      text_to_draw = [];
+
+      for (var i = 0; i<exploded_text.length; i++) {
+
+        var sel = selections["_"+i];
+        var txt = "<div class='text-character";
+        if (sel !== undefined) {
+          txt += " text-character--highlighted";
+        }
+        txt += "'>";
+        txt += "<div class='text-character__letter' id='text-character__"+text_character_id+"'>";
+        text_character_id++;
+
+        if (exploded_text[i] == " ") {
+          txt += "&nbsp;";
+        } else {
+          txt += exploded_text[i];
+        }
+
+
+        txt += "</div>";
+        txt += "<div class='selections'>";
+
+        if (sel !== undefined) {
+          // no selection; just add text
+          for (var j = 0; j<sel.length; j++) {
+            txt += "<div class='selections__item' data-id='"+sel[j].id+"' style='background-color: "+sel[j].colour+"'></div>";
+          }
+        }
+
+        txt += "</div>";
+        txt += "</div>";
+        text_to_draw.push(txt);
+
+      }
+
+      $(".content-test").html(text_to_draw.join(""));
+    }
+  </script>
+</head>
+<body>
+<div class="content-test"></div>
+
+
+  <script type="text/javascript" src="http://code.jquery.com/jquery-2.1.4.min.js"></script>
+  <script type="text/javascript">
+
+    $(document).ready(function() {
+      // populate 'content field
+      init_text = 'Lorem ipsum dolor sit amet, consectetur adipiscingelit. Aliquam dapibus ipsum et est facilisis ornare. Nunc sed lacus viverra lorem ullamcorper sagittis. Proin venenatis lacus non maximus suscipit. Sed libero eros, ultrices ut justo eu, sagittis mattis enim. Nam tempus justo nec ipsum fermentum dignissim. Praesent mattis ante eget leo vulputate interdum. Vivamus venenatis sem sit amet turpis convallis porttitor. Aenean a urna pretium, blandit lectus a, egestas tellus. Etiam pretium sed arcu vel rhoncus. Aenean pharetra, leo sit amet ultricies posuere, metus orci tempor nulla, a varius risus ipsum quis tellus. Mauris nec ullamcorper enim. Pellentesque vitae lorem vitae augue ullamcorper faucibus. Aenean tincidunt magna a feugiat eleifend. Curabitur eleifend interdum nulla sit amet porta. Morbi id orci sollicitudin, fermentum ex sed, rutrum tellus. Suspendisse ut diam consequat, suscipit dolor vel, sollicitudin nibh. Donec commodo est ac dolor malesuada, vel semper eros dapibus. Duis arcu odio, vestibulum non orci vel, auctor aliquam augue. Fusce purus augue, tempor id luctus vitae, congue et sem. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia Curae; Nam lobortis mauris vitae viverra ullamcorper.';
+
+      redrawText();
+
+      $(".content-test").on("mouseup", function() {
+        // get selected text
+        selected_text = getSelectionText();
+        if (selected_text == '') { return; }
+
+        // determine start/stop positions
+        var starting_pos = 0;
+        for (var i = 0; i<init_text.length; i++) {
+          var sub = init_text.substr(i, selected_text.length);
+          var t_sel = truncate(selected_text);
+          var t_sub = truncate(sub);
+
+          if (t_sel === t_sub) {
+            // break out of loop
+            starting_pos = i;
+            i = init_text.length;
+          }
+        }
+
+        var ending_pos = starting_pos + selected_text.length;
+
+        var colour = getRandomColour();
+        var selection_id = next_selection;
+
+        // add selection to list of selections
+        for (var i = starting_pos; i<ending_pos; i++) {
+          // create selection object, if necessary
+          if (selections["_"+i] === undefined) {
+            selections["_"+i] = [];
+          }
+          // add selection
+          selections["_"+i].push({colour: colour, id: selection_id});
+        }
+
+        // increment selection counter
+        next_selection++;
+
+        // redraw text
+        redrawText();
+
+        // clear selection
+        try {
+          document.selection.empty();
+          window.getSelection().removeAllRanges();
+        } catch (err) {
+          // error happened
+        }
+
+      });
+
+
+    });
+  </script>
+
+
+</body>
+</html>
